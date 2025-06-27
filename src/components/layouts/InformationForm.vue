@@ -10,7 +10,7 @@
         <h3 class="card-title mb-4">Client's Information Form</h3>
         <p class="mb-4">(အောက်ပါအချက်အလက်များကိုပြည့်စုံစွာဖြည့်ရန်လိုအပ်ပါသည်။ <span class="required-asterisk">*</span>)</p>
 
-        <form @submit.prevent="surveyForm">
+        <form @submit.prevent="informationForm">
           <div class="mb-4">
             <label for="category" class="form-label">Type of Product Category <span class="required-asterisk">*</span> (ပစ္စည်းအမျိုးအစား)</label>
             <select id="category" class="form-select" v-model="form.category" :class="{'p-invalid': v$.category.$error || errorFor('category')}">
@@ -68,7 +68,7 @@
 
           <div class="mb-4">
             <label for="name" class="form-label">Customer Name <span class="required-asterisk">*</span> (အမည်)</label>
-            <input type="text" id="name" class="form-control" v-model="form.name" placeholder="Enter your name" :class="{'p-invalid': v$.name.$error || errorFor('name')}">
+            <input type="text" id="name" class="form-control" v-model="form.name" @input="v$.name.$touch()" placeholder="Enter your name" :class="{'p-invalid': v$.name.$error || errorFor('name')}">
             <v-errors :vuelidateErrors="{
                 errors: v$.name.$errors,
                 value: 'name',
@@ -77,7 +77,7 @@
           
           <div class="mb-4">
             <label for="nrc" class="form-label">NRC <span class="required-asterisk">*</span> (မှတ်ပုံတင်နံပါတ်)</label>
-            <input type="text" id="nrc" class="form-control" v-model="form.nrc" placeholder="Enter your NRC number" :class="{'p-invalid': v$.nrc.$error || errorFor('nrc')}">
+            <input type="text" id="nrc" class="form-control" v-model="form.nrc" @input="v$.nrc.$touch()" placeholder="Enter your NRC number" :class="{'p-invalid': v$.nrc.$error || errorFor('nrc')}">
             <v-errors :vuelidateErrors="{
                 errors: v$.nrc.$errors,
                 value: 'nrc',
@@ -99,31 +99,47 @@
 
           <div class="mb-4">
             <label for="phone" class="form-label">Contact Number <span class="required-asterisk">*</span> (ဆက်သွယ်ရန်ဖုန်းနံပါတ်)</label>
-            <input type="text" id="phone" class="form-control" v-model="form.phone" placeholder="Enter your phone number" :class="{'p-invalid': v$.phone.$error || errorFor('phone')}">
+            <input type="text" id="phone" class="form-control" v-model="form.phone" @input="form.phone = form.phone.replace(/[^0-9]/g, ''); v$.phone.$touch()" placeholder="Enter your phone number (example- 09987654321)" :class="{'p-invalid': v$.phone.$error || errorFor('phone')}">
             <v-errors :vuelidateErrors="{
                 errors: v$.phone.$errors,
                 value: 'phone',
             }"></v-errors>
-            <label for="secPhone" class="form-label mt-4">Other Contact Number (အခြားဆက်သွယ်ရန်ဖုန်းနံပါတ်)</label>
-            <input type="text" id="secPhone" class="form-control" v-model="form.secPhone" placeholder="Enter other phone number">
           </div>
 
           <div class="mb-4">
+            <label for="secPhone" class="form-label">Other Contact Number (အခြားဆက်သွယ်ရန်ဖုန်းနံပါတ်)</label>
+            <input type="text" id="secPhone" class="form-control" v-model="form.secPhone" @input="form.secPhone = form.secPhone.replace(/[^0-9]/g, ''); v$.secPhone.$touch()" placeholder="Enter other phone number" :class="{'p-invalid': v$.secPhone.$error || errorFor('secPhone')}">
+            <v-errors :vuelidateErrors="{
+                errors: v$.secPhone.$errors,
+                value: 'secPhone',
+            }"></v-errors>
+          </div>
+
+          <!-- <div class="mb-4">
             <label for="address" class="form-label">Current Address <span class="required-asterisk">*</span> (လက်ရှိနေရပ်လိပ်စာ)</label>
             <input type="text" id="address" class="form-control" v-model="form.address" placeholder="Enter your current address" :class="{'p-invalid': v$.address.$error || errorFor('address')}">
             <v-errors :vuelidateErrors="{
                 errors: v$.address.$errors,
                 value: 'address',
             }"></v-errors>
-          </div>
+          </div> -->
 
           <div class="mb-4">
             <label for="remark" class="form-label">Remark (မှတ်ချက်/အကြံပြုချက်)</label>
             <textarea class="form-control" v-model="form.remark" rows="4" placeholder="Your suggestion..."></textarea>
           </div>
+
+          <!-- reCAPTCHA Widget -->
+          <!-- reCAPTCHA Widget -->
+          <div class="mt-5 mb-4 mx-auto">
+            <div class="recaptcha-wrapper">
+              <div class="g-recaptcha" :data-sitekey="siteKey" data-callback="onCaptchaSuccess"></div>
+            </div>
+          </div>
+
           
-          <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-primary rounded-pill">Submit</button>
+          <div class="d-grid gap-2 mt-2">
+            <button type="submit" class="btn btn-primary rounded-pill" :disabled="!isFormCorrect || !captchaVerified">Submit</button>
           </div>
         </form>
       </div>
@@ -132,11 +148,14 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { errorFor } from "@/composables/validationErrors";
 import { useVuelidate } from '@vuelidate/core'
-import { required } from '@vuelidate/validators'
-import { showSuccessAlert, showErrorAlert } from '@/composables/alert'
+import { required, minLength, maxLength } from '@vuelidate/validators'
+import { showSuccessAlert } from '@/composables/alert'
+import { notSameAs } from '@/composables/notSameAs'
+import { useRecaptcha } from '@/composables/useRecaptcha'
+
 
 const form = reactive({
   category: '',
@@ -147,7 +166,6 @@ const form = reactive({
   gender: '',
   phone: '',
   secPhone: '',
-  address: '',
   remark: ''
 })
 
@@ -155,20 +173,41 @@ const rules = {
       category: { required },
       price: { required },
       period: { required },
-      name: { required },
+      name: { required, minLength: minLength(3) },
       nrc: { required },
       gender: { required },
-      phone: { required },
-      address: { required },
+      phone: { required, minLength: minLength(9), maxLength: maxLength(11) },
+      secPhone: { minLength: minLength(9), maxLength: maxLength(11), notSameAsPhone: notSameAs((vm) => vm.phone) },
     }
 
 const v$ = useVuelidate(rules, form);
 
-async function surveyForm() {
-  const isFormCorrect = await v$.value.$validate() 
+// Make isFormCorrect reactive
+const isFormCorrect = ref(false);
 
-  if (!isFormCorrect) {
-    showErrorAlert('Please fill the required fields.')
+// Watch for form changes and update validation
+watch(v$, (newVal) => {
+  isFormCorrect.value = !newVal.$invalid;
+}, { deep: true });
+
+// use reCAPTCHA composable
+const { siteKey, captchaVerified, loadRecaptcha, onCaptchaSuccess } = useRecaptcha()
+
+// expose callback to window
+window.onCaptchaSuccess = onCaptchaSuccess
+
+loadRecaptcha()
+
+async function informationForm() {
+  const isValid = await v$.value.$validate()
+  
+  if (!isValid) {
+    alert('Please fill in the required fields.')
+    return
+  }
+
+  if (!captchaVerified.value) {
+    alert('Please verify you are not a robot.')
     return
   }
 
@@ -194,6 +233,14 @@ async function surveyForm() {
 .form-select:hover {
    background-color: #EEF7FF;
 }
+
+.recaptcha-wrapper {
+  width: 100%;
+  max-width: 302px; /* reCAPTCHA default */
+  display: flex;
+  justify-content: center;
+}
+
 </style>
 
 
