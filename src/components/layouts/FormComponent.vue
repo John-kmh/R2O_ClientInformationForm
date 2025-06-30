@@ -6,7 +6,7 @@
           <img src="@/assets/images/logo/r2o_logo.png" class="img-fluid" alt="logo" width="280" height="60" />
         </span>
       </div>
-      <div class="card-body p-5">
+      <div class="card-body py-5 px-3 px-sm-4 px-md-5">
         <h3 class="card-title mb-4">Client's Information Form</h3>
         <p class="mb-4">(အောက်ပါအချက်အလက်များကိုပြည့်စုံစွာဖြည့်ရန်လိုအပ်ပါသည်။ <span class="required-asterisk">*</span>)</p>
 
@@ -142,6 +142,7 @@
             <button type="submit" class="btn btn-primary rounded-pill" :disabled="!isFormCorrect || !captchaVerified">Submit</button>
           </div>
         </form>
+
       </div>
     </div>
   </div>
@@ -152,10 +153,14 @@ import { reactive, ref, watch } from 'vue'
 import { errorFor } from "@/composables/validationErrors";
 import { useVuelidate } from '@vuelidate/core'
 import { required, minLength, maxLength } from '@vuelidate/validators'
-import { showSuccessAlert } from '@/composables/alert'
 import { notSameAs } from '@/composables/notSameAs'
 import { useRecaptcha } from '@/composables/useRecaptcha'
+import { useRouter } from 'vue-router';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
+
+const router = useRouter()
 
 const form = reactive({
   category: '',
@@ -198,6 +203,10 @@ window.onCaptchaSuccess = onCaptchaSuccess
 
 loadRecaptcha()
 
+const showModal = ref(false);
+const modalMessage = ref('Your form has been submitted!');
+const redirectPath = ref('/success');
+
 async function informationForm() {
   const isValid = await v$.value.$validate()
   
@@ -211,8 +220,22 @@ async function informationForm() {
     return
   }
 
-  showSuccessAlert('Your information has been received!')
-  console.log('Form Submitted:', form)
+  Swal.fire({
+    title: 'Are you sure?',
+    text: 'Do you want to submit this form?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Submit',
+    cancelButtonText: 'Cancel',
+     width: 'auto',
+    customClass: {
+      popup: 'responsive-swal'
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      router.push('/success')
+    }
+  })
 }
 
 
@@ -236,11 +259,30 @@ async function informationForm() {
 
 .recaptcha-wrapper {
   width: 100%;
-  max-width: 302px; /* reCAPTCHA default */
+  max-width: 302px; 
   display: flex;
   justify-content: center;
 }
 
+.responsive-swal {
+  width: 90% !important;
+  max-width: 90% !important;
+  margin: 0 auto;
+}
+
+/* Tablet view */
+@media (min-width: 600px) {
+  .responsive-swal {
+    max-width: 500px !important;
+  }
+}
+
+/* Laptop view */
+@media (min-width: 1024px) {
+  .responsive-swal {
+    max-width: 600px !important;
+  }
+}
 </style>
 
 

@@ -1,9 +1,11 @@
 import { createRouter, createWebHistory } from "vue-router";
-import InformationForm from "@/components/layouts/InformationForm.vue";
+import FormPage from "@/views/FormPage.vue";
+import SuccessPage from '@/views/SuccessPage.vue';
 
 const routes = [
-    { path: '/', redirect: '/informationForm' },
-    { path: '/informationForm',component: InformationForm }
+    { path: '/', redirect: '/form' },
+    { path: '/form', name: 'Form', component: FormPage },
+    { path: '/success', name: 'Success', component: SuccessPage },
 ]
 
 const router = createRouter({

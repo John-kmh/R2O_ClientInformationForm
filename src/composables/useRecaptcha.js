@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 export function useRecaptcha() {
-  const siteKey = '6Lfle28rAAAAAG-MoBsxWqY0smABtPIScQRLJWt4' // Replace this
+  const siteKey = '6Lda43ArAAAAAF-nSOJx0G3z4GSidaZmanrqjpng' 
   const captchaVerified = ref(false)
 
   function onCaptchaSuccess() {
@@ -9,7 +9,7 @@ export function useRecaptcha() {
   }
 
   function loadRecaptcha() {
-    if (document.querySelector('script[src*="recaptcha/api.js"]')) return // prevent duplicate load
+    if (document.querySelector('script[src*="recaptcha/api.js"]')) return 
 
     const script = document.createElement('script')
     script.src = 'https://www.google.com/recaptcha/api.js'
